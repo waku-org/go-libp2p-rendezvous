@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
+	pb "github.com/berty/go-libp2p-rendezvous/pb"
 	ggio "github.com/gogo/protobuf/io"
-	pb "github.com/libp2p/go-libp2p-rendezvous/pb"
 	"github.com/libp2p/go-libp2p/core/host"
 	inet "github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"

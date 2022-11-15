@@ -8,7 +8,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	mocknet "github.com/libp2p/go-libp2p/p2p/net/mock"
 
-	"github.com/libp2p/go-libp2p-rendezvous/test_utils"
+	"github.com/berty/go-libp2p-rendezvous/test_utils"
 	"github.com/libp2p/go-libp2p/core/host"
 )
 

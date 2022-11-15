@@ -11,7 +11,7 @@ import (
 	inet "github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 
-	pb "github.com/libp2p/go-libp2p-rendezvous/pb"
+	pb "github.com/berty/go-libp2p-rendezvous/pb"
 )
 
 var (

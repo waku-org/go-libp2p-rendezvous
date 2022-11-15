@@ -14,9 +14,9 @@ import (
 	mocknet "github.com/libp2p/go-libp2p/p2p/net/mock"
 	"github.com/stretchr/testify/require"
 
-	db "github.com/libp2p/go-libp2p-rendezvous/db/sqlite"
-	pb "github.com/libp2p/go-libp2p-rendezvous/pb"
-	"github.com/libp2p/go-libp2p-rendezvous/test_utils"
+	db "github.com/berty/go-libp2p-rendezvous/db/sqlite"
+	pb "github.com/berty/go-libp2p-rendezvous/pb"
+	"github.com/berty/go-libp2p-rendezvous/test_utils"
 )
 
 func getRendezvousHosts(t *testing.T, ctx context.Context, m mocknet.Mocknet, n int) []host.Host {
