@@ -13,7 +13,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/multiformats/go-multiaddr"
 
-	pb "github.com/libp2p/go-libp2p-rendezvous/pb"
+	pb "github.com/berty/go-libp2p-rendezvous/pb"
 )
 
 type client struct {

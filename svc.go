@@ -8,8 +8,8 @@ import (
 	inet "github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 
-	db "github.com/libp2p/go-libp2p-rendezvous/db"
-	pb "github.com/libp2p/go-libp2p-rendezvous/pb"
+	db "github.com/berty/go-libp2p-rendezvous/db"
+	pb "github.com/berty/go-libp2p-rendezvous/pb"
 )
 
 const (
