@@ -44,6 +44,14 @@ jobs:
         uses: actions/setup-go@v2
         with:
           go-version: ${{ matrix.golang }}
+
+      # https://github.com/mattn/go-sqlite3/tree/v1.14.16#mac-osx
+      - name: install sqlight (macos)
+        if: matrix.os == 'macos-latest'
+        run: |
+          brew install sqlite3
+          brew upgrade icu4c
+
       - name: Cache Go modules
         uses: actions/cache@v1
         with:
@@ -58,5 +66,11 @@ jobs:
           go mod tidy -v
           git --no-pager diff go.mod go.sum
           git --no-pager diff --quiet go.mod go.sum
-      - name: Run tests with race
-        run: go test -v -tags "libsqlite3" -race ./... -test.timeout=10m
+
+      - name: Run tests with race (macos)
+        if: matrix.os == 'macos-latest'
+        run: go test -v -tags "darwin" -race ./... -test.timeout=10m
+
+      - name: Run tests with race (linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: go test -v -race ./... -test.timeout=10m
