@@ -40,16 +40,20 @@ type RendezvousClient interface {
 	DiscoverSubscribe(ctx context.Context, ns string) (<-chan peer.AddrInfo, error)
 }
 
-func NewRendezvousPoint(host host.Host, p peer.ID) RendezvousPoint {
+func NewRendezvousPoint(host host.Host, p peer.ID, opts ...RendezvousPointOption) RendezvousPoint {
+	cfg := defaultRendezvousPointConfig
+	cfg.apply(opts...)
 	return &rendezvousPoint{
-		host: host,
-		p:    p,
+		addrFactory: cfg.AddrsFactory,
+		host:        host,
+		p:           p,
 	}
 }
 
 type rendezvousPoint struct {
-	host host.Host
-	p    peer.ID
+	addrFactory AddrsFactory
+	host        host.Host
+	p           peer.ID
 }
 
 func NewRendezvousClient(host host.Host, rp peer.ID, sync ...RendezvousSyncClient) RendezvousClient {
@@ -75,7 +79,13 @@ func (rp *rendezvousPoint) Register(ctx context.Context, ns string, ttl int) (ti
 	r := ggio.NewDelimitedReader(s, inet.MessageSizeMax)
 	w := ggio.NewDelimitedWriter(s)
 
-	req := newRegisterMessage(ns, peer.AddrInfo{ID: rp.host.ID(), Addrs: rp.host.Addrs()}, ttl)
+	addrs := rp.addrFactory(rp.host.Addrs())
+	if len(addrs) == 0 {
+		return 0, fmt.Errorf("no addrs available to advertise: %s", ns)
+	}
+
+	log.Debugf("advertising on `%s` with: %v", ns, addrs)
+	req := newRegisterMessage(ns, peer.AddrInfo{ID: rp.host.ID(), Addrs: addrs}, ttl)
 	err = w.WriteMsg(req)
 	if err != nil {
 		return 0, err
@@ -88,7 +98,7 @@ func (rp *rendezvousPoint) Register(ctx context.Context, ns string, ttl int) (ti
 	}
 
 	if res.GetType() != pb.Message_REGISTER_RESPONSE {
-		return 0, fmt.Errorf("Unexpected response: %s", res.GetType().String())
+		return 0, fmt.Errorf("unexpected response: %s", res.GetType().String())
 	}
 
 	response := res.GetRegisterResponse()
