@@ -7,16 +7,16 @@ import (
 	"testing"
 	"time"
 
-	ggio "github.com/gogo/protobuf/io"
 	"github.com/libp2p/go-libp2p/core/host"
 	inet "github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	mocknet "github.com/libp2p/go-libp2p/p2p/net/mock"
+	"github.com/libp2p/go-msgio/pbio"
 	"github.com/stretchr/testify/require"
 
-	db "github.com/berty/go-libp2p-rendezvous/db/sqlite"
-	pb "github.com/berty/go-libp2p-rendezvous/pb"
-	"github.com/berty/go-libp2p-rendezvous/test_utils"
+	db "github.com/waku-org/go-libp2p-rendezvous/db/sqlite"
+	pb "github.com/waku-org/go-libp2p-rendezvous/pb"
+	"github.com/waku-org/go-libp2p-rendezvous/test_utils"
 )
 
 func getRendezvousHosts(t *testing.T, ctx context.Context, m mocknet.Mocknet, n int) []host.Host {
@@ -127,6 +127,16 @@ func checkHostRegistration(t *testing.T, rr Registration, host host.Host) {
 	}
 }
 
+const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+func RandStringBytes(n int) string {
+	b := make([]byte, n)
+	for i := range b {
+		b[i] = letterBytes[rand.Intn(len(letterBytes))]
+	}
+	return string(b)
+}
+
 func TestSVCErrors(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -141,51 +151,59 @@ func TestSVCErrors(t *testing.T) {
 	defer svc.DB.Close()
 
 	// testable registration errors
-	res, err := doTestRequest(ctx, hosts[1], hosts[0].ID(),
-		newRegisterMessage("", peer.AddrInfo{}, 0))
+	privKey := hosts[1].Peerstore().PrivKey(hosts[1].ID())
+	rm, err := newRegisterMessage(privKey, "", peer.AddrInfo{}, 0)
+	require.NoError(t, err)
+	res, err := doTestRequest(ctx, hosts[1], hosts[0].ID(), rm)
 	require.NoError(t, err)
 	require.Equal(t, pb.Message_E_INVALID_NAMESPACE, res.GetRegisterResponse().GetStatus())
 
-	badns := make([]byte, 2*MaxNamespaceLength)
-	rand.Read(badns)
-	res, err = doTestRequest(ctx, hosts[1], hosts[0].ID(),
-		newRegisterMessage(string(badns), peer.AddrInfo{}, 0))
+	badns := RandStringBytes(2 * MaxNamespaceLength)
+	rm, err = newRegisterMessage(privKey, badns, peer.AddrInfo{}, 0)
+	require.NoError(t, err)
+	res, err = doTestRequest(ctx, hosts[1], hosts[0].ID(), rm)
 	require.NoError(t, err)
 	require.Equal(t, pb.Message_E_INVALID_NAMESPACE, res.GetRegisterResponse().GetStatus())
 
-	res, err = doTestRequest(ctx, hosts[1], hosts[0].ID(),
-		newRegisterMessage("foo", peer.AddrInfo{}, 0))
+	rm, err = newRegisterMessage(privKey, "foo", peer.AddrInfo{}, 0)
 	require.NoError(t, err)
-	require.Equal(t, pb.Message_E_INVALID_PEER_INFO, res.GetRegisterResponse().GetStatus())
+	res, err = doTestRequest(ctx, hosts[1], hosts[0].ID(), rm)
+	require.NoError(t, err)
+	require.Equal(t, pb.Message_E_INVALID_SIGNED_PEER_RECORD, res.GetRegisterResponse().GetStatus())
 
-	res, err = doTestRequest(ctx, hosts[1], hosts[0].ID(),
-		newRegisterMessage("foo", peer.AddrInfo{ID: peer.ID("blah")}, 0))
+	rm, err = newRegisterMessage(privKey, "foo", peer.AddrInfo{ID: peer.ID("blah")}, 0)
 	require.NoError(t, err)
-	require.Equal(t, pb.Message_E_INVALID_PEER_INFO, res.GetRegisterResponse().GetStatus())
+	res, err = doTestRequest(ctx, hosts[1], hosts[0].ID(), rm)
+	require.NoError(t, err)
+	require.Equal(t, pb.Message_E_INVALID_SIGNED_PEER_RECORD, res.GetRegisterResponse().GetStatus())
 
 	p, err := peer.Decode("QmVr26fY1tKyspEJBniVhqxQeEjhF78XerGiqWAwraVLQH")
 	require.NoError(t, err)
 
-	res, err = doTestRequest(ctx, hosts[1], hosts[0].ID(),
-		newRegisterMessage("foo", peer.AddrInfo{ID: p}, 0))
+	rm, err = newRegisterMessage(privKey, "foo", peer.AddrInfo{ID: p}, 0)
 	require.NoError(t, err)
-	require.Equal(t, pb.Message_E_INVALID_PEER_INFO, res.GetRegisterResponse().GetStatus())
-
-	res, err = doTestRequest(ctx, hosts[1], hosts[0].ID(),
-		newRegisterMessage("foo", peer.AddrInfo{ID: hosts[1].ID()}, 0))
+	res, err = doTestRequest(ctx, hosts[1], hosts[0].ID(), rm)
 	require.NoError(t, err)
-	require.Equal(t, pb.Message_E_INVALID_PEER_INFO, res.GetRegisterResponse().GetStatus())
+	require.Equal(t, pb.Message_E_INVALID_SIGNED_PEER_RECORD, res.GetRegisterResponse().GetStatus())
 
-	res, err = doTestRequest(ctx, hosts[1], hosts[0].ID(),
-		newRegisterMessage("foo", peer.AddrInfo{ID: hosts[1].ID(), Addrs: hosts[1].Addrs()}, 2*MaxTTL))
+	rm, err = newRegisterMessage(privKey, "foo", peer.AddrInfo{ID: hosts[1].ID()}, 0)
+	require.NoError(t, err)
+	res, err = doTestRequest(ctx, hosts[1], hosts[0].ID(), rm)
+	require.NoError(t, err)
+	require.Equal(t, pb.Message_E_INVALID_SIGNED_PEER_RECORD, res.GetRegisterResponse().GetStatus())
+
+	rm, err = newRegisterMessage(privKey, "foo", peer.AddrInfo{ID: hosts[1].ID(), Addrs: hosts[1].Addrs()}, 2*MaxTTL)
+	require.NoError(t, err)
+	res, err = doTestRequest(ctx, hosts[1], hosts[0].ID(), rm)
 	require.NoError(t, err)
 	require.Equal(t, pb.Message_E_INVALID_TTL, res.GetRegisterResponse().GetStatus())
 
 	// do MaxRegistrations
 	for i := 0; i < MaxRegistrations+1; i++ {
 		ns := fmt.Sprintf("foo%d", i)
-		res, err = doTestRequest(ctx, hosts[1], hosts[0].ID(),
-			newRegisterMessage(ns, peer.AddrInfo{ID: hosts[1].ID(), Addrs: hosts[1].Addrs()}, 0))
+		rm, err = newRegisterMessage(privKey, ns, peer.AddrInfo{ID: hosts[1].ID(), Addrs: hosts[1].Addrs()}, 0)
+		require.NoError(t, err)
+		res, err = doTestRequest(ctx, hosts[1], hosts[0].ID(), rm)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -194,14 +212,14 @@ func TestSVCErrors(t *testing.T) {
 		}
 	}
 	// and now fail
-	res, err = doTestRequest(ctx, hosts[1], hosts[0].ID(),
-		newRegisterMessage("foo", peer.AddrInfo{ID: hosts[1].ID(), Addrs: hosts[1].Addrs()}, 0))
+	rm, err = newRegisterMessage(privKey, "foo", peer.AddrInfo{ID: hosts[1].ID(), Addrs: hosts[1].Addrs()}, 0)
+	require.NoError(t, err)
+	res, err = doTestRequest(ctx, hosts[1], hosts[0].ID(), rm)
 	require.NoError(t, err)
 	require.Equal(t, pb.Message_E_NOT_AUTHORIZED, res.GetRegisterResponse().GetStatus())
 
 	// testable discovery errors
-	res, err = doTestRequest(ctx, hosts[1], hosts[0].ID(),
-		newDiscoverMessage(string(badns), 0, nil))
+	res, err = doTestRequest(ctx, hosts[1], hosts[0].ID(), newDiscoverMessage(badns, 0, nil))
 	require.NoError(t, err)
 	require.Equal(t, pb.Message_E_INVALID_NAMESPACE, res.GetDiscoverResponse().GetStatus())
 
@@ -227,8 +245,8 @@ func doTestRequest(ctx context.Context, host host.Host, rp peer.ID, m *pb.Messag
 	}
 	defer s.Close()
 
-	r := ggio.NewDelimitedReader(s, inet.MessageSizeMax)
-	w := ggio.NewDelimitedWriter(s)
+	r := pbio.NewDelimitedReader(s, inet.MessageSizeMax)
+	w := pbio.NewDelimitedWriter(s)
 
 	err = w.WriteMsg(m)
 	if err != nil {

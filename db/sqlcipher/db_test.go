@@ -8,40 +8,7 @@ import (
 	"time"
 
 	"github.com/libp2p/go-libp2p/core/peer"
-	ma "github.com/multiformats/go-multiaddr"
 )
-
-func TestPackAddrs(t *testing.T) {
-	addrs := make([][]byte, 5)
-	for i := 0; i < 5; i++ {
-		addrs[i] = make([]byte, rand.Intn(256))
-	}
-
-	packed := packAddrs(addrs)
-	unpacked, err := unpackAddrs(packed)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if !equalAddrs(addrs, unpacked) {
-		t.Fatal("unpacked addr not equal to original")
-	}
-}
-
-func equalAddrs(addrs1, addrs2 [][]byte) bool {
-	if len(addrs1) != len(addrs2) {
-		return false
-	}
-
-	for i, addr1 := range addrs1 {
-		addr2 := addrs2[i]
-		if !bytes.Equal(addr1, addr2) {
-			return false
-		}
-	}
-
-	return true
-}
 
 func TestPackCookie(t *testing.T) {
 	nonce := make([]byte, 16)
@@ -136,20 +103,11 @@ func TestDBRegistrationAndDiscovery(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	addr1, err := ma.NewMultiaddr("/ip4/1.1.1.1/tcp/9999")
-	if err != nil {
-		t.Fatal(err)
-	}
-	addrs1 := [][]byte{addr1.Bytes()}
-
-	addr2, err := ma.NewMultiaddr("/ip4/2.2.2.2/tcp/9999")
-	if err != nil {
-		t.Fatal(err)
-	}
-	addrs2 := [][]byte{addr2.Bytes()}
+	signedPeerRecord1 := []byte{1, 2, 3, 4, 5, 6, 7, 8}
+	signedPeerRecord2 := []byte{8, 7, 6, 5, 4, 3, 2, 1}
 
 	// register p1 and do discovery
-	_, err = db.Register(p1, "foo1", addrs1, 60)
+	_, err = db.Register(p1, "foo1", signedPeerRecord1, 60)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -173,12 +131,12 @@ func TestDBRegistrationAndDiscovery(t *testing.T) {
 	if rr.Id != p1 {
 		t.Fatal("expected p1 ID in registration")
 	}
-	if !equalAddrs(rr.Addrs, addrs1) {
-		t.Fatal("expected p1's addrs in registration")
+	if !bytes.Equal(rr.SignedPeerRecord, signedPeerRecord1) {
+		t.Fatal("expected p1's signed record in registration")
 	}
 
 	// register p2 and do progressive discovery
-	_, err = db.Register(p2, "foo1", addrs2, 60)
+	_, err = db.Register(p2, "foo1", signedPeerRecord2, 60)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -202,12 +160,12 @@ func TestDBRegistrationAndDiscovery(t *testing.T) {
 	if rr.Id != p2 {
 		t.Fatal("expected p2 ID in registration")
 	}
-	if !equalAddrs(rr.Addrs, addrs2) {
+	if !bytes.Equal(rr.SignedPeerRecord, signedPeerRecord2) {
 		t.Fatal("expected p2's addrs in registration")
 	}
 
 	// reregister p1 and do progressive discovery
-	_, err = db.Register(p1, "foo1", addrs1, 60)
+	_, err = db.Register(p1, "foo1", signedPeerRecord1, 60)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -231,7 +189,7 @@ func TestDBRegistrationAndDiscovery(t *testing.T) {
 	if rr.Id != p1 {
 		t.Fatal("expected p1 ID in registration")
 	}
-	if !equalAddrs(rr.Addrs, addrs1) {
+	if !bytes.Equal(rr.SignedPeerRecord, signedPeerRecord1) {
 		t.Fatal("expected p1's addrs in registration")
 	}
 
@@ -247,7 +205,7 @@ func TestDBRegistrationAndDiscovery(t *testing.T) {
 	if rr.Id != p2 {
 		t.Fatal("expected p2 ID in registration")
 	}
-	if !equalAddrs(rr.Addrs, addrs2) {
+	if !bytes.Equal(rr.SignedPeerRecord, signedPeerRecord2) {
 		t.Fatal("expected p2's addrs in registration")
 	}
 
@@ -255,7 +213,7 @@ func TestDBRegistrationAndDiscovery(t *testing.T) {
 	if rr.Id != p1 {
 		t.Fatal("expected p1 ID in registration")
 	}
-	if !equalAddrs(rr.Addrs, addrs1) {
+	if !bytes.Equal(rr.SignedPeerRecord, signedPeerRecord1) {
 		t.Fatal("expected p1's addrs in registration")
 	}
 
@@ -284,7 +242,7 @@ func TestDBRegistrationAndDiscovery(t *testing.T) {
 	if rr.Id != p1 {
 		t.Fatal("expected p1 ID in registration")
 	}
-	if !equalAddrs(rr.Addrs, addrs1) {
+	if !bytes.Equal(rr.SignedPeerRecord, signedPeerRecord1) {
 		t.Fatal("expected p1's addrs in registration")
 	}
 
@@ -307,24 +265,15 @@ func TestDBRegistrationAndDiscoveryMultipleNS(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	addr1, err := ma.NewMultiaddr("/ip4/1.1.1.1/tcp/9999")
-	if err != nil {
-		t.Fatal(err)
-	}
-	addrs1 := [][]byte{addr1.Bytes()}
+	signedPeerRecord1 := []byte{1, 2, 3, 4, 5, 6, 7, 8}
+	signedPeerRecord2 := []byte{8, 7, 6, 5, 4, 3, 2, 1}
 
-	addr2, err := ma.NewMultiaddr("/ip4/2.2.2.2/tcp/9999")
-	if err != nil {
-		t.Fatal(err)
-	}
-	addrs2 := [][]byte{addr2.Bytes()}
-
-	_, err = db.Register(p1, "foo1", addrs1, 60)
+	_, err = db.Register(p1, "foo1", signedPeerRecord1, 60)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, err = db.Register(p1, "foo2", addrs1, 60)
+	_, err = db.Register(p1, "foo2", signedPeerRecord1, 60)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -351,7 +300,7 @@ func TestDBRegistrationAndDiscoveryMultipleNS(t *testing.T) {
 	if rr.Ns != "foo1" {
 		t.Fatal("expected namespace foo1 in registration")
 	}
-	if !equalAddrs(rr.Addrs, addrs1) {
+	if !bytes.Equal(rr.SignedPeerRecord, signedPeerRecord1) {
 		t.Fatal("expected p1's addrs in registration")
 	}
 
@@ -362,16 +311,16 @@ func TestDBRegistrationAndDiscoveryMultipleNS(t *testing.T) {
 	if rr.Ns != "foo2" {
 		t.Fatal("expected namespace foo1 in registration")
 	}
-	if !equalAddrs(rr.Addrs, addrs1) {
+	if !bytes.Equal(rr.SignedPeerRecord, signedPeerRecord1) {
 		t.Fatal("expected p1's addrs in registration")
 	}
 
-	_, err = db.Register(p2, "foo1", addrs2, 60)
+	_, err = db.Register(p2, "foo1", signedPeerRecord2, 60)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, err = db.Register(p2, "foo2", addrs2, 60)
+	_, err = db.Register(p2, "foo2", signedPeerRecord2, 60)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -398,7 +347,7 @@ func TestDBRegistrationAndDiscoveryMultipleNS(t *testing.T) {
 	if rr.Ns != "foo1" {
 		t.Fatal("expected namespace foo1 in registration")
 	}
-	if !equalAddrs(rr.Addrs, addrs2) {
+	if !bytes.Equal(rr.SignedPeerRecord, signedPeerRecord2) {
 		t.Fatal("expected p2's addrs in registration")
 	}
 
@@ -409,7 +358,7 @@ func TestDBRegistrationAndDiscoveryMultipleNS(t *testing.T) {
 	if rr.Ns != "foo2" {
 		t.Fatal("expected namespace foo1 in registration")
 	}
-	if !equalAddrs(rr.Addrs, addrs2) {
+	if !bytes.Equal(rr.SignedPeerRecord, signedPeerRecord2) {
 		t.Fatal("expected p2's addrs in registration")
 	}
 
@@ -440,7 +389,7 @@ func TestDBRegistrationAndDiscoveryMultipleNS(t *testing.T) {
 	if rr.Ns != "foo1" {
 		t.Fatal("expected namespace foo1 in registration")
 	}
-	if !equalAddrs(rr.Addrs, addrs1) {
+	if !bytes.Equal(rr.SignedPeerRecord, signedPeerRecord1) {
 		t.Fatal("expected p1's addrs in registration")
 	}
 
@@ -451,7 +400,7 @@ func TestDBRegistrationAndDiscoveryMultipleNS(t *testing.T) {
 	if rr.Ns != "foo2" {
 		t.Fatal("expected namespace foo1 in registration")
 	}
-	if !equalAddrs(rr.Addrs, addrs1) {
+	if !bytes.Equal(rr.SignedPeerRecord, signedPeerRecord1) {
 		t.Fatal("expected p1's addrs in registration")
 	}
 
@@ -469,13 +418,9 @@ func TestDBCleanup(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	addr1, err := ma.NewMultiaddr("/ip4/1.1.1.1/tcp/9999")
-	if err != nil {
-		t.Fatal(err)
-	}
-	addrs1 := [][]byte{addr1.Bytes()}
+	signedPeerRecord1 := []byte{1, 2, 3, 4, 5, 6, 7, 8}
 
-	_, err = db.Register(p1, "foo1", addrs1, 1)
+	_, err = db.Register(p1, "foo1", signedPeerRecord1, 1)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -3,14 +3,16 @@ package rendezvous
 import (
 	"errors"
 	"fmt"
+	"time"
 
-	db "github.com/berty/go-libp2p-rendezvous/db"
-	pb "github.com/berty/go-libp2p-rendezvous/pb"
+	db "github.com/waku-org/go-libp2p-rendezvous/db"
+	pb "github.com/waku-org/go-libp2p-rendezvous/pb"
 
 	logging "github.com/ipfs/go-log/v2"
+	crypto "github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/protocol"
-	ma "github.com/multiformats/go-multiaddr"
+	"github.com/libp2p/go-libp2p/core/record"
 )
 
 var log = logging.Logger("rendezvous")
@@ -30,11 +32,11 @@ func (e RendezvousError) Error() string {
 	return fmt.Sprintf("Rendezvous error: %s (%s)", e.Text, e.Status.String())
 }
 
-func NewRegisterMessage(ns string, pi peer.AddrInfo, ttl int) *pb.Message {
-	return newRegisterMessage(ns, pi, ttl)
+func NewRegisterMessage(privKey crypto.PrivKey, ns string, pi peer.AddrInfo, ttl int) (*pb.Message, error) {
+	return newRegisterMessage(privKey, ns, pi, ttl)
 }
 
-func newRegisterMessage(ns string, pi peer.AddrInfo, ttl int) *pb.Message {
+func newRegisterMessage(privKey crypto.PrivKey, ns string, pi peer.AddrInfo, ttl int) (*pb.Message, error) {
 	msg := new(pb.Message)
 	msg.Type = pb.Message_REGISTER
 	msg.Register = new(pb.Message_Register)
@@ -43,15 +45,28 @@ func newRegisterMessage(ns string, pi peer.AddrInfo, ttl int) *pb.Message {
 	}
 	if ttl > 0 {
 		ttl64 := int64(ttl)
-		msg.Register.Ttl = ttl64
+		msg.Register.Ttl = uint64(ttl64)
 	}
-	msg.Register.Peer = new(pb.Message_PeerInfo)
-	msg.Register.Peer.Id = []byte(pi.ID)
-	msg.Register.Peer.Addrs = make([][]byte, len(pi.Addrs))
-	for i, addr := range pi.Addrs {
-		msg.Register.Peer.Addrs[i] = addr.Bytes()
+
+	peerInfo := &peer.PeerRecord{
+		PeerID: pi.ID,
+		Addrs:  pi.Addrs,
+		Seq:    uint64(time.Now().Unix()),
 	}
-	return msg
+
+	envelope, err := record.Seal(peerInfo, privKey)
+	if err != nil {
+		return nil, err
+	}
+
+	envPayload, err := envelope.Marshal()
+	if err != nil {
+		return nil, err
+	}
+
+	msg.Register.SignedPeerRecord = envPayload
+
+	return msg, nil
 }
 
 func newUnregisterMessage(ns string, pid peer.ID) *pb.Message {
@@ -61,7 +76,6 @@ func newUnregisterMessage(ns string, pid peer.ID) *pb.Message {
 	if ns != "" {
 		msg.Unregister.Ns = ns
 	}
-	msg.Unregister.Id = []byte(pid)
 	return msg
 }
 
@@ -77,42 +91,37 @@ func newDiscoverMessage(ns string, limit int, cookie []byte) *pb.Message {
 		msg.Discover.Ns = ns
 	}
 	if limit > 0 {
-		limit64 := int64(limit)
-		msg.Discover.Limit = limit64
+		limitu64 := uint64(limit)
+		msg.Discover.Limit = limitu64
 	}
 	if cookie != nil {
 		msg.Discover.Cookie = cookie
 	}
 	return msg
 }
-
-func pbToPeerInfo(p *pb.Message_PeerInfo) (peer.AddrInfo, error) {
-	if p == nil {
-		return peer.AddrInfo{}, errors.New("missing peer info")
-	}
-
-	id, err := peer.IDFromBytes(p.Id)
+func pbToPeerRecord(envelopeBytes []byte) (peer.AddrInfo, error) {
+	envelope, rec, err := record.ConsumeEnvelope(envelopeBytes, peer.PeerRecordEnvelopeDomain)
 	if err != nil {
 		return peer.AddrInfo{}, err
 	}
-	addrs := make([]ma.Multiaddr, 0, len(p.Addrs))
-	for _, bs := range p.Addrs {
-		addr, err := ma.NewMultiaddrBytes(bs)
-		if err != nil {
-			log.Errorf("Error parsing multiaddr: %s", err.Error())
-			continue
-		}
-		addrs = append(addrs, addr)
+
+	peerRec, ok := rec.(*peer.PeerRecord)
+	if !ok {
+		return peer.AddrInfo{}, errors.New("invalid peer record")
 	}
 
-	return peer.AddrInfo{ID: id, Addrs: addrs}, nil
+	if !peerRec.PeerID.MatchesPublicKey(envelope.PublicKey) {
+		return peer.AddrInfo{}, errors.New("signing key does not match peer record")
+	}
+
+	return peer.AddrInfo{ID: peerRec.PeerID, Addrs: peerRec.Addrs}, nil
 }
 
 func newRegisterResponse(ttl int) *pb.Message_RegisterResponse {
-	ttl64 := int64(ttl)
+	ttlu64 := uint64(ttl)
 	r := new(pb.Message_RegisterResponse)
 	r.Status = pb.Message_OK
-	r.Ttl = ttl64
+	r.Ttl = ttlu64
 	return r
 }
 
@@ -132,10 +141,8 @@ func newDiscoverResponse(regs []db.RegistrationRecord, cookie []byte) *pb.Messag
 		rreg := new(pb.Message_Register)
 		rns := reg.Ns
 		rreg.Ns = rns
-		rreg.Peer = new(pb.Message_PeerInfo)
-		rreg.Peer.Id = []byte(reg.Id)
-		rreg.Peer.Addrs = reg.Addrs
-		rttl := int64(reg.Ttl)
+		rreg.SignedPeerRecord = reg.SignedPeerRecord
+		rttl := uint64(reg.Ttl)
 		rreg.Ttl = rttl
 		rregs[i] = rreg
 	}
@@ -150,29 +157,5 @@ func newDiscoverResponseError(status pb.Message_ResponseStatus, text string) *pb
 	r := new(pb.Message_DiscoverResponse)
 	r.Status = status
 	r.StatusText = text
-	return r
-}
-
-func newDiscoverSubscribeResponse(subscriptionType string, subscriptionDetails string) *pb.Message_DiscoverSubscribeResponse {
-	r := new(pb.Message_DiscoverSubscribeResponse)
-	r.Status = pb.Message_OK
-
-	r.SubscriptionDetails = subscriptionDetails
-	r.SubscriptionType = subscriptionType
-
-	return r
-}
-
-func newDiscoverSubscribeResponseError(status pb.Message_ResponseStatus, text string) *pb.Message_DiscoverSubscribeResponse {
-	r := new(pb.Message_DiscoverSubscribeResponse)
-	r.Status = status
-	r.StatusText = text
-	return r
-}
-
-func newDiscoverSubscribeMessage(ns string, supportedSubscriptionTypes []string) *pb.Message_DiscoverSubscribe {
-	r := new(pb.Message_DiscoverSubscribe)
-	r.Ns = ns
-	r.SupportedSubscriptionTypes = supportedSubscriptionTypes
 	return r
 }

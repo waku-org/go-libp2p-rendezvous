@@ -9,47 +9,39 @@ message Message {
     UNREGISTER = 2;
     DISCOVER = 3;
     DISCOVER_RESPONSE = 4;
-
-    DISCOVER_SUBSCRIBE = 100;
-    DISCOVER_SUBSCRIBE_RESPONSE = 101;
   }
 
   enum ResponseStatus {
-    OK                  = 0;
-    E_INVALID_NAMESPACE = 100;
-    E_INVALID_PEER_INFO = 101;
-    E_INVALID_TTL       = 102;
-    E_INVALID_COOKIE    = 103;
-    E_NOT_AUTHORIZED    = 200;
-    E_INTERNAL_ERROR    = 300;
-    E_UNAVAILABLE       = 400;
-  }
-
-  message PeerInfo {
-    bytes id = 1;
-    repeated bytes addrs = 2;
+    OK                            = 0;
+    E_INVALID_NAMESPACE           = 100;
+    E_INVALID_SIGNED_PEER_RECORD  = 101;
+    E_INVALID_TTL                 = 102;
+    E_INVALID_COOKIE              = 103;
+    E_NOT_AUTHORIZED              = 200;
+    E_INTERNAL_ERROR              = 300;
+    E_UNAVAILABLE                 = 400;
   }
 
   message Register {
     string ns = 1;
-    PeerInfo peer = 2;
-    int64 ttl = 3; // in seconds
+    bytes signedPeerRecord = 2;
+    uint64 ttl = 3; // in seconds
   }
 
   message RegisterResponse {
     ResponseStatus status = 1;
     string statusText = 2;
-    int64 ttl = 3;
+    uint64 ttl = 3; // in seconds
   }
 
   message Unregister {
     string ns = 1;
-    bytes id = 2;
+    // bytes id = 2; deprecated as per https://github.com/libp2p/specs/issues/335
   }
 
   message Discover {
     string ns = 1;
-    int64 limit = 2;
+    uint64 limit = 2;
     bytes cookie = 3;
   }
 
@@ -60,32 +52,10 @@ message Message {
     string statusText = 4;
   }
 
-  message DiscoverSubscribe {
-    repeated string supported_subscription_types = 1;
-    string ns = 2;
-  }
-
-  message DiscoverSubscribeResponse {
-    string subscription_type = 1;
-    string subscription_details = 2;
-    ResponseStatus status = 3;
-    string statusText = 4;
-  }
-
   MessageType type = 1;
   Register register = 2;
   RegisterResponse registerResponse = 3;
   Unregister unregister = 4;
   Discover discover = 5;
   DiscoverResponse discoverResponse = 6;
-
-  DiscoverSubscribe discoverSubscribe = 100;
-  DiscoverSubscribeResponse discoverSubscribeResponse = 101;
-}
-
-message RegistrationRecord{
-    string id = 1;
-    repeated bytes addrs = 2;
-    string ns = 3;
-    int64 ttl = 4;
 }
