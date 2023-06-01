@@ -110,7 +110,12 @@ func (rp *rendezvousPoint) Register(ctx context.Context, ns string, ttl int) (ti
 		return 0, RendezvousError{Status: status, Text: res.GetRegisterResponse().GetStatusText()}
 	}
 
-	return time.Duration(response.Ttl) * time.Second, nil
+	responseTTL := int64(0)
+	if response.Ttl != nil {
+		responseTTL = int64(*response.Ttl)
+	}
+
+	return time.Duration(responseTTL) * time.Second, nil
 }
 
 func (rc *rendezvousClient) Register(ctx context.Context, ns string, ttl int) (time.Duration, error) {

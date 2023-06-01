@@ -50,7 +50,7 @@ func (rz *RendezvousService) handleStream(s inet.Stream) {
 		switch t {
 		case pb.Message_REGISTER:
 			r := rz.handleRegister(pid, req.GetRegister())
-			res.Type = pb.Message_REGISTER_RESPONSE
+			res.Type = pb.Message_REGISTER_RESPONSE.Enum()
 			res.RegisterResponse = r
 			err = w.WriteMsg(&res)
 			if err != nil {
@@ -66,7 +66,7 @@ func (rz *RendezvousService) handleStream(s inet.Stream) {
 
 		case pb.Message_DISCOVER:
 			r := rz.handleDiscover(pid, req.GetDiscover())
-			res.Type = pb.Message_DISCOVER_RESPONSE
+			res.Type = pb.Message_DISCOVER_RESPONSE.Enum()
 			res.DiscoverResponse = r
 			err = w.WriteMsg(&res)
 			if err != nil {
@@ -194,7 +194,7 @@ func (rz *RendezvousService) handleDiscover(p peer.ID, m *pb.Message_Discover) *
 		return newDiscoverResponseError(pb.Message_E_INTERNAL_ERROR, "database error")
 	}
 
-	log.Infof("discover query: %s %s -> %d", p, ns, len(regs))
+	log.Debugf("discover query: %s %s -> %d", p, ns, len(regs))
 
 	return newDiscoverResponse(regs, cookie)
 }

@@ -70,6 +70,16 @@ func (x Message_MessageType) Number() protoreflect.EnumNumber {
 	return protoreflect.EnumNumber(x)
 }
 
+// Deprecated: Do not use.
+func (x *Message_MessageType) UnmarshalJSON(b []byte) error {
+	num, err := protoimpl.X.UnmarshalJSONEnum(x.Descriptor(), b)
+	if err != nil {
+		return err
+	}
+	*x = Message_MessageType(num)
+	return nil
+}
+
 // Deprecated: Use Message_MessageType.Descriptor instead.
 func (Message_MessageType) EnumDescriptor() ([]byte, []int) {
 	return file_rendezvous_proto_rawDescGZIP(), []int{0, 0}
@@ -134,6 +144,16 @@ func (x Message_ResponseStatus) Number() protoreflect.EnumNumber {
 	return protoreflect.EnumNumber(x)
 }
 
+// Deprecated: Do not use.
+func (x *Message_ResponseStatus) UnmarshalJSON(b []byte) error {
+	num, err := protoimpl.X.UnmarshalJSONEnum(x.Descriptor(), b)
+	if err != nil {
+		return err
+	}
+	*x = Message_ResponseStatus(num)
+	return nil
+}
+
 // Deprecated: Use Message_ResponseStatus.Descriptor instead.
 func (Message_ResponseStatus) EnumDescriptor() ([]byte, []int) {
 	return file_rendezvous_proto_rawDescGZIP(), []int{0, 1}
@@ -144,12 +164,12 @@ type Message struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Type             Message_MessageType       `protobuf:"varint,1,opt,name=type,proto3,enum=rendezvous.pb.Message_MessageType" json:"type,omitempty"`
-	Register         *Message_Register         `protobuf:"bytes,2,opt,name=register,proto3" json:"register,omitempty"`
-	RegisterResponse *Message_RegisterResponse `protobuf:"bytes,3,opt,name=registerResponse,proto3" json:"registerResponse,omitempty"`
-	Unregister       *Message_Unregister       `protobuf:"bytes,4,opt,name=unregister,proto3" json:"unregister,omitempty"`
-	Discover         *Message_Discover         `protobuf:"bytes,5,opt,name=discover,proto3" json:"discover,omitempty"`
-	DiscoverResponse *Message_DiscoverResponse `protobuf:"bytes,6,opt,name=discoverResponse,proto3" json:"discoverResponse,omitempty"`
+	Type             *Message_MessageType      `protobuf:"varint,1,opt,name=type,enum=rendezvous.pb.Message_MessageType" json:"type,omitempty"`
+	Register         *Message_Register         `protobuf:"bytes,2,opt,name=register" json:"register,omitempty"`
+	RegisterResponse *Message_RegisterResponse `protobuf:"bytes,3,opt,name=registerResponse" json:"registerResponse,omitempty"`
+	Unregister       *Message_Unregister       `protobuf:"bytes,4,opt,name=unregister" json:"unregister,omitempty"`
+	Discover         *Message_Discover         `protobuf:"bytes,5,opt,name=discover" json:"discover,omitempty"`
+	DiscoverResponse *Message_DiscoverResponse `protobuf:"bytes,6,opt,name=discoverResponse" json:"discoverResponse,omitempty"`
 }
 
 func (x *Message) Reset() {
@@ -185,8 +205,8 @@ func (*Message) Descriptor() ([]byte, []int) {
 }
 
 func (x *Message) GetType() Message_MessageType {
-	if x != nil {
-		return x.Type
+	if x != nil && x.Type != nil {
+		return *x.Type
 	}
 	return Message_REGISTER
 }
@@ -231,9 +251,9 @@ type Message_Register struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Ns               string `protobuf:"bytes,1,opt,name=ns,proto3" json:"ns,omitempty"`
-	SignedPeerRecord []byte `protobuf:"bytes,2,opt,name=signedPeerRecord,proto3" json:"signedPeerRecord,omitempty"`
-	Ttl              uint64 `protobuf:"varint,3,opt,name=ttl,proto3" json:"ttl,omitempty"` // in seconds
+	Ns               *string `protobuf:"bytes,1,opt,name=ns" json:"ns,omitempty"`
+	SignedPeerRecord []byte  `protobuf:"bytes,2,opt,name=signedPeerRecord" json:"signedPeerRecord,omitempty"`
+	Ttl              *uint64 `protobuf:"varint,3,opt,name=ttl" json:"ttl,omitempty"` // in seconds
 }
 
 func (x *Message_Register) Reset() {
@@ -269,8 +289,8 @@ func (*Message_Register) Descriptor() ([]byte, []int) {
 }
 
 func (x *Message_Register) GetNs() string {
-	if x != nil {
-		return x.Ns
+	if x != nil && x.Ns != nil {
+		return *x.Ns
 	}
 	return ""
 }
@@ -283,8 +303,8 @@ func (x *Message_Register) GetSignedPeerRecord() []byte {
 }
 
 func (x *Message_Register) GetTtl() uint64 {
-	if x != nil {
-		return x.Ttl
+	if x != nil && x.Ttl != nil {
+		return *x.Ttl
 	}
 	return 0
 }
@@ -294,9 +314,9 @@ type Message_RegisterResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Status     Message_ResponseStatus `protobuf:"varint,1,opt,name=status,proto3,enum=rendezvous.pb.Message_ResponseStatus" json:"status,omitempty"`
-	StatusText string                 `protobuf:"bytes,2,opt,name=statusText,proto3" json:"statusText,omitempty"`
-	Ttl        uint64                 `protobuf:"varint,3,opt,name=ttl,proto3" json:"ttl,omitempty"` // in seconds
+	Status     *Message_ResponseStatus `protobuf:"varint,1,opt,name=status,enum=rendezvous.pb.Message_ResponseStatus" json:"status,omitempty"`
+	StatusText *string                 `protobuf:"bytes,2,opt,name=statusText" json:"statusText,omitempty"`
+	Ttl        *uint64                 `protobuf:"varint,3,opt,name=ttl" json:"ttl,omitempty"` // in seconds
 }
 
 func (x *Message_RegisterResponse) Reset() {
@@ -332,22 +352,22 @@ func (*Message_RegisterResponse) Descriptor() ([]byte, []int) {
 }
 
 func (x *Message_RegisterResponse) GetStatus() Message_ResponseStatus {
-	if x != nil {
-		return x.Status
+	if x != nil && x.Status != nil {
+		return *x.Status
 	}
 	return Message_OK
 }
 
 func (x *Message_RegisterResponse) GetStatusText() string {
-	if x != nil {
-		return x.StatusText
+	if x != nil && x.StatusText != nil {
+		return *x.StatusText
 	}
 	return ""
 }
 
 func (x *Message_RegisterResponse) GetTtl() uint64 {
-	if x != nil {
-		return x.Ttl
+	if x != nil && x.Ttl != nil {
+		return *x.Ttl
 	}
 	return 0
 }
@@ -357,7 +377,7 @@ type Message_Unregister struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Ns string `protobuf:"bytes,1,opt,name=ns,proto3" json:"ns,omitempty"` // bytes id = 2; deprecated as per https://github.com/libp2p/specs/issues/335
+	Ns *string `protobuf:"bytes,1,opt,name=ns" json:"ns,omitempty"` // optional bytes id = 2; deprecated as per https://github.com/libp2p/specs/issues/335
 }
 
 func (x *Message_Unregister) Reset() {
@@ -393,8 +413,8 @@ func (*Message_Unregister) Descriptor() ([]byte, []int) {
 }
 
 func (x *Message_Unregister) GetNs() string {
-	if x != nil {
-		return x.Ns
+	if x != nil && x.Ns != nil {
+		return *x.Ns
 	}
 	return ""
 }
@@ -404,9 +424,9 @@ type Message_Discover struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Ns     string `protobuf:"bytes,1,opt,name=ns,proto3" json:"ns,omitempty"`
-	Limit  uint64 `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
-	Cookie []byte `protobuf:"bytes,3,opt,name=cookie,proto3" json:"cookie,omitempty"`
+	Ns     *string `protobuf:"bytes,1,opt,name=ns" json:"ns,omitempty"`
+	Limit  *uint64 `protobuf:"varint,2,opt,name=limit" json:"limit,omitempty"`
+	Cookie []byte  `protobuf:"bytes,3,opt,name=cookie" json:"cookie,omitempty"`
 }
 
 func (x *Message_Discover) Reset() {
@@ -442,15 +462,15 @@ func (*Message_Discover) Descriptor() ([]byte, []int) {
 }
 
 func (x *Message_Discover) GetNs() string {
-	if x != nil {
-		return x.Ns
+	if x != nil && x.Ns != nil {
+		return *x.Ns
 	}
 	return ""
 }
 
 func (x *Message_Discover) GetLimit() uint64 {
-	if x != nil {
-		return x.Limit
+	if x != nil && x.Limit != nil {
+		return *x.Limit
 	}
 	return 0
 }
@@ -467,10 +487,10 @@ type Message_DiscoverResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Registrations []*Message_Register    `protobuf:"bytes,1,rep,name=registrations,proto3" json:"registrations,omitempty"`
-	Cookie        []byte                 `protobuf:"bytes,2,opt,name=cookie,proto3" json:"cookie,omitempty"`
-	Status        Message_ResponseStatus `protobuf:"varint,3,opt,name=status,proto3,enum=rendezvous.pb.Message_ResponseStatus" json:"status,omitempty"`
-	StatusText    string                 `protobuf:"bytes,4,opt,name=statusText,proto3" json:"statusText,omitempty"`
+	Registrations []*Message_Register     `protobuf:"bytes,1,rep,name=registrations" json:"registrations,omitempty"`
+	Cookie        []byte                  `protobuf:"bytes,2,opt,name=cookie" json:"cookie,omitempty"`
+	Status        *Message_ResponseStatus `protobuf:"varint,3,opt,name=status,enum=rendezvous.pb.Message_ResponseStatus" json:"status,omitempty"`
+	StatusText    *string                 `protobuf:"bytes,4,opt,name=statusText" json:"statusText,omitempty"`
 }
 
 func (x *Message_DiscoverResponse) Reset() {
@@ -520,15 +540,15 @@ func (x *Message_DiscoverResponse) GetCookie() []byte {
 }
 
 func (x *Message_DiscoverResponse) GetStatus() Message_ResponseStatus {
-	if x != nil {
-		return x.Status
+	if x != nil && x.Status != nil {
+		return *x.Status
 	}
 	return Message_OK
 }
 
 func (x *Message_DiscoverResponse) GetStatusText() string {
-	if x != nil {
-		return x.StatusText
+	if x != nil && x.StatusText != nil {
+		return *x.StatusText
 	}
 	return ""
 }
@@ -617,7 +637,7 @@ var file_rendezvous_proto_rawDesc = []byte{
 	0x5a, 0x45, 0x44, 0x10, 0xc8, 0x01, 0x12, 0x15, 0x0a, 0x10, 0x45, 0x5f, 0x49, 0x4e, 0x54, 0x45,
 	0x52, 0x4e, 0x41, 0x4c, 0x5f, 0x45, 0x52, 0x52, 0x4f, 0x52, 0x10, 0xac, 0x02, 0x12, 0x12, 0x0a,
 	0x0d, 0x45, 0x5f, 0x55, 0x4e, 0x41, 0x56, 0x41, 0x49, 0x4c, 0x41, 0x42, 0x4c, 0x45, 0x10, 0x90,
-	0x03, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x03,
 }
 
 var (

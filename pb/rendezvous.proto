@@ -1,4 +1,4 @@
-syntax = "proto3";
+syntax = "proto2";
 
 package rendezvous.pb;
 
@@ -23,39 +23,39 @@ message Message {
   }
 
   message Register {
-    string ns = 1;
-    bytes signedPeerRecord = 2;
-    uint64 ttl = 3; // in seconds
+    optional string ns = 1;
+    optional bytes signedPeerRecord = 2;
+    optional uint64 ttl = 3; // in seconds
   }
 
   message RegisterResponse {
-    ResponseStatus status = 1;
-    string statusText = 2;
-    uint64 ttl = 3; // in seconds
+    optional ResponseStatus status = 1;
+    optional string statusText = 2;
+    optional uint64 ttl = 3; // in seconds
   }
 
   message Unregister {
-    string ns = 1;
-    // bytes id = 2; deprecated as per https://github.com/libp2p/specs/issues/335
+    optional string ns = 1;
+    // optional bytes id = 2; deprecated as per https://github.com/libp2p/specs/issues/335
   }
 
   message Discover {
-    string ns = 1;
-    uint64 limit = 2;
-    bytes cookie = 3;
+    optional string ns = 1;
+    optional uint64 limit = 2;
+    optional bytes cookie = 3;
   }
 
   message DiscoverResponse {
     repeated Register registrations = 1;
-    bytes cookie = 2;
-    ResponseStatus status = 3;
-    string statusText = 4;
+    optional bytes cookie = 2;
+    optional ResponseStatus status = 3;
+    optional string statusText = 4;
   }
 
-  MessageType type = 1;
-  Register register = 2;
-  RegisterResponse registerResponse = 3;
-  Unregister unregister = 4;
-  Discover discover = 5;
-  DiscoverResponse discoverResponse = 6;
+  optional MessageType type = 1;
+  optional Register register = 2;
+  optional RegisterResponse registerResponse = 3;
+  optional Unregister unregister = 4;
+  optional Discover discover = 5;
+  optional DiscoverResponse discoverResponse = 6;
 }
